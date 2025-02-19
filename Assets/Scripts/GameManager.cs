@@ -24,34 +24,68 @@ public class GameManager : MonoBehaviour
             DontDestroyOnLoad(this.gameObject);
         }
     }
+
     // Start is called before the first frame update
     void Start()
     {
-        
+        LoadDeck();
+        Shuffle();
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            DrawCard();
+        }
     }
 
     void Deal()
     {
+        // Implement your deal logic here
+    }
 
+    void LoadDeck()
+    {
+        Card[] cards = Resources.LoadAll<Card>("PathToYourPrefabsFolder");
+        for (int i = 0; i < cards.Length && deck.Count < 10; i++)
+        {
+            deck.Add(cards[i]);
+        }
     }
 
     void Shuffle()
     {
-
+        for (int i = 0; i < deck.Count; i++)
+        {
+            Card temp = deck[i];
+            int randomIndex = Random.Range(0, deck.Count);
+            deck[i] = deck[randomIndex];
+            deck[randomIndex] = temp;
+        }
     }
 
     void AI_Turn()
     {
-
+        // Implement AI turn logic here
     }
 
-
-
+    void DrawCard()
+    {
+        if (deck.Count > 0)
+        {
+            Card drawnCard = deck[0];
+            deck.RemoveAt(0);
+            player_hand.Add(drawnCard);
     
+            // Set the position of the drawn card based on its index in the player's hand
+            int cardIndex = player_hand.Count - 1;
+            drawnCard.transform.position = new Vector3(cardIndex * 2.0f, 0, 0); // Adjust the multiplier as needed
+        }
+        else
+        {
+            Debug.Log("Deck is empty!");
+        }
+    }
 }

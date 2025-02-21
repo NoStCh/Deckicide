@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        LoadDeck();
+        LoadDeck("Card_Objects");
         Shuffle();
     }
 
@@ -46,12 +46,14 @@ public class GameManager : MonoBehaviour
         // Implement your deal logic here
     }
 
-    void LoadDeck()
+    void LoadDeck(string folderPath)
     {
-        Card[] cards = Resources.LoadAll<Card>("PathToYourPrefabsFolder");
+        Card[] cards = Resources.LoadAll<Card>(folderPath);
+        Debug.Log("Cards loaded: " + cards.Length);
         for (int i = 0; i < cards.Length && deck.Count < 10; i++)
         {
             deck.Add(cards[i]);
+            Debug.Log("Card added to deck: " + cards[i].name);
         }
     }
 
@@ -78,10 +80,11 @@ public class GameManager : MonoBehaviour
             Card drawnCard = deck[0];
             deck.RemoveAt(0);
             player_hand.Add(drawnCard);
-    
+
             // Set the position of the drawn card based on its index in the player's hand
             int cardIndex = player_hand.Count - 1;
             drawnCard.transform.position = new Vector3(cardIndex * 2.0f, 0, 0); // Adjust the multiplier as needed
+            Debug.Log("Card drawn: " + drawnCard.name);
         }
         else
         {

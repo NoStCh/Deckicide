@@ -12,6 +12,13 @@ public class GameManager : MonoBehaviour
     public List<Card> ai_hand = new List<Card>();
     public List<Card> discard_pile = new List<Card>();
 
+    private List<Card> playerHand = new List<Card>();
+    private Card selectedCard;
+    private Camera mainCamera;
+
+    [SerializeField] private GameObject rectanglePrefab; // Reference to the Rectangle
+    private Transform rectangleTransform;
+
     private void Awake()
     {
         if (gm != null && gm != this)
@@ -28,16 +35,43 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        LoadDeck("Card_Objects");
+        LoadDeck("GitHub/Deckicide/Assets/Cards/Card_Objects");
         Shuffle();
+        mainCamera = Camera.main;
+        
+        // Find the Rectangle in the scene
+        rectangleTransform = GameObject.Find("Rectangle").transform;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.D))
+        // Handle card selection
+        if (Input.GetMouseButtonDown(0))
         {
-            DrawCard();
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                Card clickedCard = hit.collider.GetComponent<Card>();
+                if (clickedCard != null && playerHand.Contains(clickedCard))
+                {
+                    // Deselect previously selected card
+                    if (selectedCard != null)
+                        selectedCard.IsSelected = false;
+
+                    // Select new card
+                    selectedCard = clickedCard;
+                    selectedCard.IsSelected = true;
+                }
+            }
+        }
+
+        // Handle playing selected card
+        if (Input.GetKeyDown(KeyCode.Return) && selectedCard != null)
+        {
+            PlayCard(selectedCard);
         }
     }
 
@@ -73,22 +107,61 @@ public class GameManager : MonoBehaviour
         // Implement AI turn logic here
     }
 
-    void DrawCard()
+    public void DrawCard()
     {
-        if (deck.Count > 0)
+        if (Input.GetKeyDown(KeyCode.D))
         {
             Card drawnCard = deck[0];
             deck.RemoveAt(0);
-            player_hand.Add(drawnCard);
+            playerHand.Add(drawnCard);
 
             // Set the position of the drawn card based on its index in the player's hand
-            int cardIndex = player_hand.Count - 1;
+            int cardIndex = playerHand.Count - 1;
             drawnCard.transform.position = new Vector3(cardIndex * 2.0f, 0, 0); // Adjust the multiplier as needed
             Debug.Log("Card drawn: " + drawnCard.name);
+            UpdateHandPositions();
         }
         else
         {
             Debug.Log("Deck is empty!");
+        }
+    }
+
+    private void PlayCard(Card card)
+    {
+        // Add your logic for playing a card to the table
+        playerHand.Remove(card);
+        selectedCard = null;
+        
+        // Move card to the table position
+        card.transform.position = new Vector3(0f, 0f, 0f); // Adjust position as needed
+        card.transform.rotation = Quaternion.identity;
+
+        UpdateHandPositions();
+    }
+
+    private void UpdateHandPositions()
+    {
+        if (rectangleTransform == null || playerHand.Count == 0) return;
+
+        // Get Rectangle's dimensions and position
+        Vector3 rectPosition = rectangleTransform.position;
+        Vector3 rectScale = rectangleTransform.localScale;
+        
+        float cardSpacing = rectScale.x / (playerHand.Count + 1);
+        float startX = rectPosition.x - (rectScale.x / 2) + cardSpacing;
+        
+        for (int i = 0; i < playerHand.Count; i++)
+        {
+            float xPos = startX + (i * cardSpacing);
+            Vector3 position = new Vector3(xPos, rectPosition.y, rectPosition.z);
+            
+            // Calculate rotation based on position relative to center
+            float centerOffset = xPos - rectPosition.x;
+            float rotationAngle = centerOffset * -5f; // Adjust multiplier for more/less rotation
+            
+            playerHand[i].transform.position = position;
+            playerHand[i].transform.rotation = Quaternion.Euler(20f, rotationAngle, 0f);
         }
     }
 }

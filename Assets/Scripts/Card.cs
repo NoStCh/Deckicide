@@ -20,7 +20,25 @@ public class Card : MonoBehaviour
     public TextMeshProUGUI costText;
     public TextMeshProUGUI damageText;
     public Image spriteImage;
-        
+
+    private bool isSelected = false;
+    private Vector3 handPosition;
+    private Quaternion handRotation;
+
+    // Add these properties
+    public bool IsSelected
+    {
+        get { return isSelected; }
+        set
+        {
+            isSelected = value;
+            // Modify the vertical offset to work with the Rectangle
+            if (isSelected)
+                transform.position += Vector3.up * 0.2f;
+            else
+                transform.position -= Vector3.up * 0.2f;
+        }
+    }
 
     // Start is called before the first frame update
     void Start()

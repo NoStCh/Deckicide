@@ -35,7 +35,7 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        LoadDeck("GitHub/Deckicide/Assets/Cards/Card_Objects");
+        LoadDeck("Cards/Card_Objects");
         Shuffle();
         mainCamera = Camera.main;
         
@@ -73,6 +73,36 @@ public class GameManager : MonoBehaviour
         {
             PlayCard(selectedCard);
         }
+
+        // Add card drawing on 'D' key press
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            DrawCard();
+        }
+
+        // Add drag and drop functionality
+        if (Input.GetMouseButton(0))
+        {
+            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                Card draggedCard = hit.collider.GetComponent<Card>();
+                if (draggedCard != null && playerHand.Contains(draggedCard))
+                {
+                    // Move card to mouse position
+                    Vector3 mouseWorldPos = ray.GetPoint(10f); // 10 units from camera
+                    draggedCard.transform.position = new Vector3(mouseWorldPos.x, mouseWorldPos.y, draggedCard.transform.position.z);
+                }
+            }
+        }
+
+        // Handle card repositioning on mouse release
+        if (Input.GetMouseButtonUp(0) && selectedCard != null)
+        {
+            ReorderHandBasedOnPosition();
+        }
     }
 
     void Deal()
@@ -84,10 +114,19 @@ public class GameManager : MonoBehaviour
     {
         Card[] cards = Resources.LoadAll<Card>(folderPath);
         Debug.Log("Cards loaded: " + cards.Length);
+        
+        if (cards.Length == 0)
+        {
+            Debug.LogError("No cards found in the specified folder!");
+            return;
+        }
+
         for (int i = 0; i < cards.Length && deck.Count < 10; i++)
         {
-            deck.Add(cards[i]);
-            Debug.Log("Card added to deck: " + cards[i].name);
+            Card cardInstance = Instantiate(cards[i]);
+            deck.Add(cardInstance);
+            cardInstance.gameObject.SetActive(false); // Hide the card until drawn
+            Debug.Log("Card added to deck: " + cardInstance.name);
         }
     }
 
@@ -109,22 +148,19 @@ public class GameManager : MonoBehaviour
 
     public void DrawCard()
     {
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            Card drawnCard = deck[0];
-            deck.RemoveAt(0);
-            playerHand.Add(drawnCard);
-
-            // Set the position of the drawn card based on its index in the player's hand
-            int cardIndex = playerHand.Count - 1;
-            drawnCard.transform.position = new Vector3(cardIndex * 2.0f, 0, 0); // Adjust the multiplier as needed
-            Debug.Log("Card drawn: " + drawnCard.name);
-            UpdateHandPositions();
-        }
-        else
+        if (deck.Count == 0)
         {
             Debug.Log("Deck is empty!");
+            return;
         }
+
+        Card drawnCard = deck[0];
+        deck.RemoveAt(0);
+        playerHand.Add(drawnCard);
+        drawnCard.gameObject.SetActive(true);
+        
+        UpdateHandPositions();
+        Debug.Log("Card drawn: " + drawnCard.name);
     }
 
     private void PlayCard(Card card)
@@ -162,6 +198,44 @@ public class GameManager : MonoBehaviour
             
             playerHand[i].transform.position = position;
             playerHand[i].transform.rotation = Quaternion.Euler(20f, rotationAngle, 0f);
+        }
+    }
+
+    private void ReorderHandBasedOnPosition()
+    {
+        if (selectedCard == null || rectangleTransform == null) return;
+
+        // Get the current position of the selected card
+        float cardX = selectedCard.transform.position.x;
+        
+        // Find the closest valid position in the hand
+        float rectWidth = rectangleTransform.localScale.x;
+        float cardSpacing = rectWidth / (playerHand.Count + 1);
+        float startX = rectangleTransform.position.x - (rectWidth / 2) + cardSpacing;
+        
+        int closestIndex = 0;
+        float minDistance = float.MaxValue;
+        
+        // Find the closest position index
+        for (int i = 0; i < playerHand.Count; i++)
+        {
+            float posX = startX + (i * cardSpacing);
+            float distance = Mathf.Abs(posX - cardX);
+            
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+        
+        // Reorder the hand
+        int currentIndex = playerHand.IndexOf(selectedCard);
+        if (currentIndex != closestIndex)
+        {
+            playerHand.RemoveAt(currentIndex);
+            playerHand.Insert(closestIndex, selectedCard);
+            UpdateHandPositions();
         }
     }
 }
